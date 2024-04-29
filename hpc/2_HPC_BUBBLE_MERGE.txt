@@ -1,0 +1,195 @@
+#include <iostream>
+#include <omp.h>
+#include <vector>
+#include <chrono>
+#include <algorithm>
+
+using namespace std;
+using namespace chrono;
+
+// Sequential Bubble Sort
+void sequentialBubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; ++i) {
+        for (int j = 0; j < n - i - 1; ++j) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}
+
+// Parallel Bubble Sort
+void parallelBubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    #pragma omp parallel
+    {
+        for (int i = 0; i < n - 1; ++i) {
+            #pragma omp for
+            for (int j = 0; j < n - i - 1; ++j) {
+                if (arr[j] > arr[j + 1]) {
+                    swap(arr[j], arr[j + 1]);
+                }
+            }
+        }
+    }
+}
+
+// Merge Sort Helper Function
+void merge(vector<int>& arr, int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+
+    vector<int> L(n1), R(n2);
+
+    for (int i = 0; i < n1; ++i) {
+        L[i] = arr[l + i];
+    }
+    for (int j = 0; j < n2; ++j) {
+        R[j] = arr[m + 1 + j];
+    }
+
+    int i = 0, j = 0, k = l;
+
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            ++i;
+        } else {
+            arr[k] = R[j];
+            ++j;
+        }
+        ++k;
+    }
+
+    while ef) {
+        arr[k] = L[i];
+        ++i;
+        ++k;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        ++j;
+        ++k;
+    }
+}
+
+// Sequential Merge Sort
+void sequentialMergeSort(vector<int>& arr, int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        sequentialMergeSort(arr, l, m);
+        sequentialMergeSort(arr, m + 1, r);
+
+        merge(arr, l, m, r);
+    }
+}
+
+// Parallel Merge Sort
+void parallelMergeSort(vector<int>& arr, int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+
+        #pragma omp parallel sections
+        {
+            #pragma omp section
+            parallelMergeSort(arr, l, m);
+            #pragma omp section
+            parallelMergeSort(arr, m + 1, r);
+        }
+
+        merge(arr, l, m, r);
+    }
+}
+
+int main() {
+    const int N = 10000;
+    vector<int> arr(N);
+    vector<int> arr_copy(N);
+
+    // Initialize array with random values
+    for (int i = 0; i < N; ++i) {
+        arr[i] = rand() % 10000;
+    }
+
+    // Copy array for comparison
+    arr_copy = arr;
+
+    // Measure time for sequential bubble sort
+    auto start = high_resolution_clock::now();
+    sequentialBubbleSort(arr);
+    auto stop = high_resolution_clock::now();
+    auto sequential_time = duration_cast<milliseconds>(stop - start);
+
+    // Measure time for parallel bubble sort
+    start = high_resolution_clock::now();
+    parallelBubbleSort(arr_copy);
+    stop = high_resolution_clock::now();
+    auto parallel_time_bubble = duration_cast<milliseconds>(stop - start);
+
+    // Reset array
+    arr_copy = arr;
+
+    // Measure time for sequential merge sort
+    start = high_resolution_clock::now();
+    sequentialMergeSort(arr, 0, N - 1);
+    stop = high_resolution_clock::now();
+    auto sequential_time_merge = duration_cast<milliseconds>(stop - start);
+
+    // Measure time for parallel merge sort
+    start = high_resolution_clock::now();
+    parallelMergeSort(arr_copy, 0, N - 1);
+    stop = high_resolution_clock::now();
+    auto parallel_time_merge = duration_cast<milliseconds>(stop - start);
+
+    cout << "Sequential Bubble Sort Time: " << sequential_time.count() << " milliseconds" << endl;
+    cout << "Parallel Bubble Sort Time: " << parallel_time_bubble.count() << " milliseconds" << endl;
+    cout << "Sequential Merge Sort Time: " << sequential_time_merge.count() << " milliseconds" << endl;
+    cout << "Parallel Merge Sort Time: " << parallel_time_merge.count() << " milliseconds" << endl;
+
+    return 0;
+}
+/*
+The code you provided compares the execution times of sequential and parallel implementations of bubble sort and merge sort algorithms. Let's analyze the time and space complexity of each algorithm and implementation:
+
+### Bubble Sort:
+- **Time Complexity**:
+    - Worst Case: O(n^2)
+    - Best Case (when already sorted): O(n)
+    - Average Case: O(n^2)
+- **Space Complexity**: O(1) (constant space)
+
+### Merge Sort:
+- **Time Complexity**:
+    - Worst Case: O(n log n)
+    - Best Case: O(n log n)
+    - Average Case: O(n log n)
+- **Space Complexity**: O(n) (requires auxiliary space for merging)
+
+### Parallelization:
+- In the provided code, both bubble sort and merge sort algorithms are parallelized using OpenMP directives.
+- Parallelization aims to utilize multiple processor cores to execute sorting tasks concurrently, potentially reducing execution time.
+- Parallelization can increase memory consumption due to additional threads and synchronization overhead.
+
+### Analysis:
+- Bubble sort, being inherently inefficient, may not benefit significantly from parallelization, especially for smaller datasets.
+- Merge sort, with its superior time complexity, is better suited for parallelization, particularly for large datasets.
+- However, the effectiveness of parallelization depends on factors such as the size of the dataset, hardware architecture, and overhead introduced by parallelization.
+
+### Time and Space Complexity of Parallel Implementations:
+- Parallelization introduces overhead due to thread creation, synchronization, and coordination.
+- Space complexity remains the same for both sequential and parallel implementations of each algorithm, but there might be additional memory overhead due to parallel execution.
+
+### Performance Evaluation:
+- The provided code measures the execution time of both sequential and parallel implementations for comparison.
+- Performance results will vary depending on the hardware, compiler optimization, and the size of the dataset.
+- Conducting empirical tests on different input sizes and hardware configurations would provide more insights into the effectiveness of parallelization.
+
+In summary, while parallelization can potentially improve the performance of sorting algorithms, the actual benefits depend on various factors. Experimental evaluation with different input sizes and hardware configurations is crucial for assessing the effectiveness of parallel implementations.
+
+g++ -o parallel_sort parallel_sort.cpp -fopenmp
+./parallel_sort
+
+*/
